@@ -2,60 +2,263 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RAG Research Agent</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #f4f4f4; display: flex; justify-content: center; padding: 40px 16px; }
-    .container { background: white; padding: 32px; border-radius: 12px; width: 100%; max-width: 700px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
-    h1 { font-size: 22px; margin-bottom: 4px; }
-    p.sub { color: #666; font-size: 14px; margin-bottom: 24px; }
-    label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; }
-    .upload-box { border: 2px dashed #ccc; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; margin-bottom: 16px; }
-    .upload-box:hover { border-color: #555; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .header p {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 640px;
+      margin-bottom: 16px;
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 12px;
+    }
+
+    .upload-zone {
+      border: 1px dashed #333;
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .upload-zone:hover {
+      border-color: #555;
+      background: #222;
+    }
+
+    .upload-zone.active {
+      border-color: #4ade80;
+      background: #0d1f13;
+    }
+
+    .upload-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .upload-zone p {
+      font-size: 13px;
+      color: #555;
+    }
+
+    .upload-zone strong {
+      color: #aaa;
+      font-weight: 500;
+    }
+
     input[type="file"] { display: none; }
-    .status { font-size: 13px; color: #444; margin-bottom: 20px; min-height: 20px; }
-    .status.success { color: green; }
-    .status.error { color: red; }
-    textarea { width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 12px; font-size: 14px; resize: vertical; min-height: 80px; margin-bottom: 12px; }
-    button { background: #111; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; }
-    button:disabled { background: #999; cursor: not-allowed; }
-    .answer-box { margin-top: 24px; background: #f9f9f9; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; display: none; }
-    .answer-box h3 { font-size: 13px; color: #888; margin-bottom: 8px; }
-    .chunks { margin-top: 16px; }
-    .chunk { background: #eee; border-radius: 6px; padding: 10px; font-size: 12px; color: #555; margin-bottom: 8px; }
+
+    .status {
+      font-size: 13px;
+      margin-top: 10px;
+      min-height: 18px;
+      color: #555;
+    }
+
+    .status.success { color: #4ade80; }
+    .status.error { color: #f87171; }
+
+    textarea {
+      width: 100%;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: #e8e8e8;
+      resize: none;
+      min-height: 80px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus { border-color: #444; }
+    textarea::placeholder { color: #444; }
+
+    .ask-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 11px;
+      background: #ffffff;
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .ask-btn:hover { background: #e8e8e8; }
+    .ask-btn:disabled { background: #2a2a2a; color: #555; cursor: not-allowed; }
+
+    .answer-card {
+      display: none;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 24px;
+      width: 100%;
+      max-width: 640px;
+      margin-bottom: 16px;
+    }
+
+    .answer-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 14px;
+    }
+
+    .answer-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #d4d4d4;
+      white-space: pre-wrap;
+    }
+
+    .sources-toggle {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #555;
+      cursor: pointer;
+      user-select: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sources-toggle:hover { color: #888; }
+
+    .sources {
+      display: none;
+      margin-top: 12px;
+      border-top: 1px solid #2a2a2a;
+      padding-top: 12px;
+    }
+
+    .chunk {
+      background: #111;
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 8px;
+      line-height: 1.6;
+      border-left: 2px solid #2a2a2a;
+    }
+
+    .loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #333;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>RAG Research Agent</h1>
-    <p class="sub">Upload a PDF, then ask questions about it.</p>
 
-    <label>Step 1 — Upload a PDF</label>
-    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-      <span id="uploadLabel">Click to select a PDF file</span>
+  <div class="header">
+    <h1>RAG Research Agent</h1>
+    <p>Upload a document. Ask anything about it.</p>
+  </div>
+
+  <div class="card">
+    <div class="step-label">Step 1 — Upload PDF</div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+      <div class="upload-icon">↑</div>
+      <p><strong id="uploadLabel">Click to select a PDF</strong></p>
+      <p>or drag and drop</p>
     </div>
     <input type="file" id="fileInput" accept=".pdf" onchange="uploadFile()" />
     <div class="status" id="uploadStatus"></div>
+  </div>
 
-    <label>Step 2 — Ask a question</label>
-    <textarea id="queryInput" placeholder="e.g. What is this document about?"></textarea>
-    <button id="askBtn" onclick="askQuestion()" disabled>Ask</button>
+  <div class="card">
+    <div class="step-label">Step 2 — Ask a question</div>
+    <textarea id="queryInput" placeholder="What is this document about? Summarize the key points..."></textarea>
+    <button class="ask-btn" id="askBtn" onclick="askQuestion()" disabled>Ask</button>
+  </div>
 
-    <div class="answer-box" id="answerBox">
-      <h3>Answer</h3>
-      <div id="answerText"></div>
-      <div class="chunks" id="chunksBox"></div>
-    </div>
+  <div class="answer-card" id="answerCard">
+    <div class="answer-label">Answer</div>
+    <div class="answer-text" id="answerText"></div>
+    <div class="sources-toggle" id="sourcesToggle" onclick="toggleSources()">▸ Show source chunks</div>
+    <div class="sources" id="sourcesBox"></div>
   </div>
 
   <script>
+    const zone = document.getElementById('uploadZone');
+
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('active'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('active'));
+    zone.addEventListener('drop', e => {
+      e.preventDefault();
+      zone.classList.remove('active');
+      const file = e.dataTransfer.files[0];
+      if (file) { document.getElementById('fileInput').files = e.dataTransfer.files; uploadFile(); }
+    });
+
     async function uploadFile() {
       const file = document.getElementById('fileInput').files[0];
       if (!file) return;
-
       document.getElementById('uploadLabel').textContent = file.name;
-      document.getElementById('uploadStatus').textContent = 'Uploading...';
-      document.getElementById('uploadStatus').className = 'status';
+      const status = document.getElementById('uploadStatus');
+      status.textContent = 'Uploading...';
+      status.className = 'status';
 
       const formData = new FormData();
       formData.append('file', file);
@@ -63,19 +266,27 @@
       try {
         const res = await fetch('/upload', { method: 'POST', body: formData });
         const data = await res.json();
-
         if (res.ok) {
-          document.getElementById('uploadStatus').textContent = `✅ Indexed ${data.chunks_indexed} chunk(s) from "${data.file}"`;
-          document.getElementById('uploadStatus').className = 'status success';
+          status.textContent = `✓ Indexed ${data.chunks_indexed} chunks from "${data.file}"`;
+          status.className = 'status success';
           document.getElementById('askBtn').disabled = false;
+          zone.classList.add('active');
         } else {
-          document.getElementById('uploadStatus').textContent = `❌ ${data.detail}`;
-          document.getElementById('uploadStatus').className = 'status error';
+          status.textContent = `✗ ${data.detail}`;
+          status.className = 'status error';
         }
-      } catch (e) {
-        document.getElementById('uploadStatus').textContent = '❌ Upload failed.';
-        document.getElementById('uploadStatus').className = 'status error';
+      } catch {
+        status.textContent = '✗ Upload failed.';
+        status.className = 'status error';
       }
+    }
+
+    let sourcesVisible = false;
+
+    function toggleSources() {
+      sourcesVisible = !sourcesVisible;
+      document.getElementById('sourcesBox').style.display = sourcesVisible ? 'block' : 'none';
+      document.getElementById('sourcesToggle').textContent = sourcesVisible ? '▾ Hide source chunks' : '▸ Show source chunks';
     }
 
     async function askQuestion() {
@@ -84,7 +295,7 @@
 
       const btn = document.getElementById('askBtn');
       btn.disabled = true;
-      btn.textContent = 'Thinking...';
+      btn.innerHTML = '<span class="loader"></span>Thinking...';
 
       try {
         const res = await fetch('/query', {
@@ -96,25 +307,25 @@
 
         document.getElementById('answerText').textContent = data.answer;
 
-        const chunksBox = document.getElementById('chunksBox');
-        chunksBox.innerHTML = '';
-        if (data.source_chunks && data.source_chunks.length > 0) {
-          const title = document.createElement('h3');
-          title.style.marginTop = '12px';
-          title.textContent = 'Source chunks used';
-          chunksBox.appendChild(title);
+        const sourcesBox = document.getElementById('sourcesBox');
+        sourcesBox.innerHTML = '';
+        if (data.source_chunks?.length) {
           data.source_chunks.forEach(chunk => {
             const div = document.createElement('div');
             div.className = 'chunk';
             div.textContent = chunk;
-            chunksBox.appendChild(div);
+            sourcesBox.appendChild(div);
           });
         }
 
-        document.getElementById('answerBox').style.display = 'block';
-      } catch (e) {
+        sourcesVisible = false;
+        document.getElementById('sourcesToggle').textContent = '▸ Show source chunks';
+        document.getElementById('sourcesBox').style.display = 'none';
+        document.getElementById('answerCard').style.display = 'block';
+
+      } catch {
         document.getElementById('answerText').textContent = 'Request failed.';
-        document.getElementById('answerBox').style.display = 'block';
+        document.getElementById('answerCard').style.display = 'block';
       }
 
       btn.disabled = false;
