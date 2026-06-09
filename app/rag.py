@@ -11,7 +11,7 @@ def ingest_pdf(file_path: str):
     loader = PyPDFLoader(file_path)
     docs = loader.load()
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=75)
     chunks = splitter.split_documents(docs)
 
     if not chunks:
@@ -21,7 +21,7 @@ def ingest_pdf(file_path: str):
     vectorstore.save_local(VECTOR_STORE_PATH)
     return len(chunks)
 
-def retrieve(query: str, k: int = 4):
+def retrieve(query: str, k: int = 6):
     if not os.path.exists(VECTOR_STORE_PATH):
         return []
 

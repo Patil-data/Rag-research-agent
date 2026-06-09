@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RAG Research Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f4f4f4; display: flex; justify-content: center; padding: 40px 16px; }
+    .container { background: white; padding: 32px; border-radius: 12px; width: 100%; max-width: 700px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    p.sub { color: #666; font-size: 14px; margin-bottom: 24px; }
+    label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 6px; }
+    .upload-box { border: 2px dashed #ccc; border-radius: 8px; padding: 24px; text-align: center; cursor: pointer; margin-bottom: 16px; }
+    .upload-box:hover { border-color: #555; }
+    input[type="file"] { display: none; }
+    .status { font-size: 13px; color: #444; margin-bottom: 20px; min-height: 20px; }
+    .status.success { color: green; }
+    .status.error { color: red; }
+    textarea { width: 100%; border: 1px solid #ccc; border-radius: 8px; padding: 12px; font-size: 14px; resize: vertical; min-height: 80px; margin-bottom: 12px; }
+    button { background: #111; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    .answer-box { margin-top: 24px; background: #f9f9f9; border-radius: 8px; padding: 16px; font-size: 14px; line-height: 1.6; display: none; }
+    .answer-box h3 { font-size: 13px; color: #888; margin-bottom: 8px; }
+    .chunks { margin-top: 16px; }
+    .chunk { background: #eee; border-radius: 6px; padding: 10px; font-size: 12px; color: #555; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RAG Research Agent</h1>
+    <p class="sub">Upload a PDF, then ask questions about it.</p>
+
+    <label>Step 1 — Upload a PDF</label>
+    <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+      <span id="uploadLabel">Click to select a PDF file</span>
+    </div>
+    <input type="file" id="fileInput" accept=".pdf" onchange="uploadFile()" />
+    <div class="status" id="uploadStatus"></div>
+
+    <label>Step 2 — Ask a question</label>
+    <textarea id="queryInput" placeholder="e.g. What is this document about?"></textarea>
+    <button id="askBtn" onclick="askQuestion()" disabled>Ask</button>
+
+    <div class="answer-box" id="answerBox">
+      <h3>Answer</h3>
+      <div id="answerText"></div>
+      <div class="chunks" id="chunksBox"></div>
+    </div>
+  </div>
+
+  <script>
+    async function uploadFile() {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) return;
+
+      document.getElementById('uploadLabel').textContent = file.name;
+      document.getElementById('uploadStatus').textContent = 'Uploading...';
+      document.getElementById('uploadStatus').className = 'status';
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await fetch('/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+
+        if (res.ok) {
+          document.getElementById('uploadStatus').textContent = `✅ Indexed ${data.chunks_indexed} chunk(s) from "${data.file}"`;
+          document.getElementById('uploadStatus').className = 'status success';
+          document.getElementById('askBtn').disabled = false;
+        } else {
+          document.getElementById('uploadStatus').textContent = `❌ ${data.detail}`;
+          document.getElementById('uploadStatus').className = 'status error';
+        }
+      } catch (e) {
+        document.getElementById('uploadStatus').textContent = '❌ Upload failed.';
+        document.getElementById('uploadStatus').className = 'status error';
+      }
+    }
+
+    async function askQuestion() {
+      const query = document.getElementById('queryInput').value.trim();
+      if (!query) return;
+
+      const btn = document.getElementById('askBtn');
+      btn.disabled = true;
+      btn.textContent = 'Thinking...';
+
+      try {
+        const res = await fetch('/query', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query })
+        });
+        const data = await res.json();
+
+        document.getElementById('answerText').textContent = data.answer;
+
+        const chunksBox = document.getElementById('chunksBox');
+        chunksBox.innerHTML = '';
+        if (data.source_chunks && data.source_chunks.length > 0) {
+          const title = document.createElement('h3');
+          title.style.marginTop = '12px';
+          title.textContent = 'Source chunks used';
+          chunksBox.appendChild(title);
+          data.source_chunks.forEach(chunk => {
+            const div = document.createElement('div');
+            div.className = 'chunk';
+            div.textContent = chunk;
+            chunksBox.appendChild(div);
+          });
+        }
+
+        document.getElementById('answerBox').style.display = 'block';
+      } catch (e) {
+        document.getElementById('answerText').textContent = 'Request failed.';
+        document.getElementById('answerBox').style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Ask';
+    }
+  </script>
+</body>
+</html>

@@ -3,15 +3,15 @@ from langchain_core.messages import SystemMessage, HumanMessage
 from app.rag import retrieve
 import os
 
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=os.getenv("GROQ_API_KEY")
-)
+SYSTEM_PROMPT = """You are a precise research assistant. You will be given chunks of text retrieved from a document.
 
-SYSTEM_PROMPT = """You are a research assistant. You are given retrieved context chunks from a document.
-Use them to answer the user's question precisely.
-If the context is insufficient or empty, clearly say so — do not hallucinate an answer.
-Always mention which part of the context you used."""
+Rules:
+- Answer ONLY from the provided context chunks
+- Be specific — use exact terms, numbers, names from the context
+- If the context contains a direct answer, quote or closely paraphrase it
+- If the context does not contain enough information, say exactly that
+- Do not add general knowledge or assumptions
+- Structure your answer clearly if it has multiple parts"""
 
 def run_agent(query: str) -> dict:
     chunks = retrieve(query)
@@ -23,11 +23,16 @@ def run_agent(query: str) -> dict:
             "retrieval_used": False
         }
 
+    llm = ChatGroq(
+        model="llama-3.3-70b-versatile",
+        api_key=os.getenv("GROQ_API_KEY")
+    )
+
     context = "\n\n---\n\n".join(chunks)
 
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=f"Context:\n{context}\n\nQuestion: {query}")
+        HumanMessage(content=f"Context from document:\n{context}\n\nQuestion: {query}")
     ]
 
     try:
